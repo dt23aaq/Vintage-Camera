@@ -8,6 +8,8 @@ const path = require('path');
 const cameraRoutes = require('./routes/camera');
 const teddyRoutes = require('./routes/teddy');
 const furnitureRoutes = require('./routes/furniture');
+const adminRoutes = require('./routes/admin');
+const { apiRateLimit } = require('./middleware/rateLimit');
 
 const app = express();
 
@@ -42,10 +44,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limiting middleware
+app.use(apiRateLimit);
+
 // API routes
 app.use('/api/cameras', cameraRoutes);
 app.use('/api/teddies', teddyRoutes);
 app.use('/api/furniture', furnitureRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 error handler
 app.use((req, res) => {
