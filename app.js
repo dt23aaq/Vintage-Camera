@@ -1,17 +1,4 @@
-const http = require('http');
-
-const hostname = '127.0.0.1';
-const port = 3000;
-
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Hello World');
-});
-
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
-});
+require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -24,9 +11,8 @@ const furnitureRoutes = require('./routes/furniture');
 
 const app = express();
 
-mongoose.connect(
-  'mongodb+srv://will:nAcmfCoHGDgzrCHG@cluster0-pme76.mongodb.net/test?retryWrites=true',
-  { useNewUrlParser: true })
+// MongoDB connection with environment variables
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log('Successfully connected to MongoDB Atlas!');
   })
@@ -35,19 +21,47 @@ mongoose.connect(
     console.error(error);
   });
 
+// CORS middleware
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:3000');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   next();
 });
 
+// Static files
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
+// Body parser
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// API routes
 app.use('/api/cameras', cameraRoutes);
 app.use('/api/teddies', teddyRoutes);
 app.use('/api/furniture', furnitureRoutes);
+
+// 404 error handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Error:', error);
+  const statusCode = error.statusCode || 500;
+  res.status(statusCode).json({
+    error: {
+      message: error.message || 'Internal Server Error',
+      status: statusCode
+    }
+  });
+});
 
 module.exports = app;

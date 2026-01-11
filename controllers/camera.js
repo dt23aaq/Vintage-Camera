@@ -1,5 +1,6 @@
 const uuid = require('uuid/v1');
 const Camera = require('../models/Camera');
+const Order = require('../models/Order');
 
 exports.getAllCameras = (req, res, next) => {
   Camera.find().then(
@@ -12,7 +13,7 @@ exports.getAllCameras = (req, res, next) => {
     }
   ).catch(
     (error) => {
-      res.status(400).send(error);
+      res.status(400).json({ error: 'Failed to retrieve cameras' });
     }
   );
 };
@@ -21,20 +22,20 @@ exports.getOneCamera = (req, res, next) => {
   Camera.findById(req.params.id).then(
     (camera) => {
       if (!camera) {
-        return res.status(404).send(new Error('Camera not found!'));
+        return res.status(404).json({ error: 'Camera not found' });
       }
       camera.imageUrl = req.protocol + '://' + req.get('host') + '/images/' + camera.imageUrl;
       res.status(200).json(camera);
     }
   ).catch(
     (error) => {
-      res.status(500).send(error);
+      res.status(500).json({ error: 'Failed to retrieve camera' });
     }
   )
 };
 
 /**
- *
+ * Order cameras
  * Expects request to contain:
  * contact: {
  *   firstName: string,
@@ -44,46 +45,61 @@ exports.getOneCamera = (req, res, next) => {
  *   email: string
  * }
  * products: [string] <-- array of product _id
- *
  */
 exports.orderCameras = (req, res, next) => {
-  if (!req.body.contact ||
-      !req.body.contact.firstName ||
-      !req.body.contact.lastName ||
-      !req.body.contact.address ||
-      !req.body.contact.city ||
-      !req.body.contact.email ||
-      !req.body.products) {
-    return res.status(400).send(new Error('Bad request!'));
-  }
   let queries = [];
+  let totalPrice = 0;
+  
   for (let productId of req.body.products) {
     const queryPromise = new Promise((resolve, reject) => {
       Camera.findById(productId).then(
         (camera) => {
-          camera.imageUrl = req.protocol + '://' + req.get('host') + '/images/' + camera.imageUrl;
-          resolve(camera);
+          if (!camera) {
+            reject(new Error(`Camera with ID ${productId} not found`));
+          } else {
+            totalPrice += camera.price;
+            resolve(camera);
+          }
         }
-      ).catch(
-        (error) => {
-          reject(error);
-        }
-      )
+      ).catch(reject);
     });
     queries.push(queryPromise);
   }
+  
   Promise.all(queries).then(
     (cameras) => {
-      const orderId = uuid();
-      return res.status(201).json({
+      // Create order with product details
+      const orderData = {
         contact: req.body.contact,
-        products: cameras,
-        orderId: orderId
-      })
+        products: cameras.map(camera => ({
+          productId: camera._id,
+          productName: camera.name,
+          price: camera.price
+        })),
+        totalPrice: totalPrice,
+        status: 'pending'
+      };
+      
+      // Save order to database
+      const order = new Order(orderData);
+      return order.save();
+    }
+  ).then(
+    (savedOrder) => {
+      res.status(201).json({
+        orderId: savedOrder._id,
+        contact: savedOrder.contact,
+        products: savedOrder.products,
+        totalPrice: savedOrder.totalPrice,
+        status: savedOrder.status
+      });
     }
   ).catch(
     (error) => {
-      return res.status(500).json(new Error('There was a problem with your order!'));
+      res.status(500).json({ 
+        error: 'There was a problem with your order!',
+        details: error.message 
+      });
     }
   );
 };
