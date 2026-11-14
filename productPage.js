@@ -3,8 +3,11 @@ const camera = document.getElementById('camera');
 //Api request & Dynamic function
 
 function getCameras() {
-  fetch('http://localhost:3000/api/cameras')
+  fetch(`${API_BASE_URL}/cameras`)
     .then(function (res) {
+      if (!res.ok) {
+        throw new Error('Unable to load cameras');
+      }
       return res.json()
     })
     .then(function (data) {
@@ -24,6 +27,10 @@ function getCameras() {
       });
       document.getElementById('camera').innerHTML = output;
     })
+    .catch(function () {
+      document.getElementById('camera').innerHTML =
+        '<p class="col text-center text-danger">Cameras are unavailable right now. Please try again later.</p>';
+    });
 
 }
 
