@@ -1,87 +1,66 @@
 
-// Request Function
-function inputValidation() {
+const form = document.getElementById('myForm');
+const submitButton = document.getElementById('submit-button');
+const errorMessage = document.getElementById('error-message');
 
-  // Get form elements
-  let myForm = document.getElementById('myForm');
-  let firstNameInput = document.getElementById('first-name').value;
-  let lastNameInput = document.getElementById('last-name').value;
-  let addressInput = document.getElementById('address').value;
-  let cityInput = document.getElementById('city').value;
-  let emailInput = document.getElementById('email').value;
-  let cart = JSON.parse(localStorage.getItem('productsInCart'));
-  let errorMessage = document.getElementById('error-message');
+function showError(message) {
+  errorMessage.textContent = message;
+  errorMessage.classList.remove('d-none');
+}
 
-  let confirmedOrder = [];
-  let total = 0;
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
 
-  cart.forEach(function (product) {
-    confirmedOrder.push(product.id);
+  const formData = new FormData(form);
+  const cart = JSON.parse(localStorage.getItem('productsInCart') || '[]');
+  const confirmedOrder = cart.map((product) => product.id);
 
-    //sum of the item in the cart
-    total += product.price;
-  });
-
-  // sending form conditions
-  if (firstNameInput.length < 5) {
-    text = "Please enter valid first name";
-    errorMessage.innerHTML = text;
-    return false;
-  } else if (lastNameInput.length < 5) {
-    text = "Please enter valid last name";
-    errorMessage.innerHTML = text;
-    return false;
-  } else if (address.length < 5) {
-    text = "Please enter valid address";
-    errorMessage.innerHTML = text;
-    return false;
-  } else if (city.length < 5) {
-    text = "Please enter valid city";
-    errorMessage.innerHTML = text;
-    return false;
-  } else if (emailInput.indexOf('@') == -1 || email.length < 6) {
-    text = "Please Enter a Valid Email Address";
-    errorMessage.innerHTML = text;
-    return false;
-  } else {
-    text = '';
-    errorMessage.innerHTML = text;
-    errorMessage.classList.add('d-none');
+  if (confirmedOrder.length === 0) {
+    showError('Your cart is empty. Add a camera before placing an order.');
+    return;
   }
 
-  // POST Request
-  fetch('http://localhost:3000/api/cameras/order', {
+  if (!form.checkValidity()) {
+    showError('Please complete all fields with valid information.');
+    form.classList.add('was-validated');
+    return;
+  }
+
+  errorMessage.textContent = '';
+  errorMessage.classList.add('d-none');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Submitting...';
+
+  fetch(`${API_BASE_URL}/cameras/order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       contact: {
-        firstName: firstNameInput,
-        lastName: lastNameInput,
-        address: addressInput,
-        city: cityInput,
-        email: emailInput,
+        firstName: formData.get('first-name').trim(),
+        lastName: formData.get('last-name').trim(),
+        address: formData.get('address').trim(),
+        city: formData.get('city').trim(),
+        email: formData.get('email').trim(),
       },
       products: confirmedOrder,
     }),
   })
-    .then((res) => res.json())
+    .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
     .then((data) => {
+      if (!data.ok) {
+        const details = data.data.details || [];
+        throw new Error(details[0]?.message || data.data.error || 'Unable to place your order.');
+      }
 
-      //Items will be cleared in the local storage after submitting the order
+      const total = cart.reduce((sum, product) => sum + Number(product.price), 0);
       localStorage.removeItem("productsInCart");
-
-      // Response to the user
-      window.location.href = 'displayconfirmationpage.html?id=' + data.orderId + '&price=' + total;
+      window.location.href = 'displayconfirmationpage.html?id=' + data.data.orderId + '&price=' + total;
     })
-}
-
-//submit order button + send data to backend
-let submitButton = document.getElementById('submit-button');
-
-submitButton.addEventListener('click',
-  function (e) {
-    e.preventDefault();
-    inputValidation()
-  });
+    .catch(function (error) {
+      showError(error.message);
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit order';
+    });
+});

@@ -7,8 +7,16 @@ const cartTotal = document.querySelector('.cartTotal');
 //Api request & Dynamic function
 
 function getCameras() {
-  fetch('http://localhost:3000/api/cameras/' + id)
+  if (!id) {
+    camera.innerHTML = '<p class="col text-center text-danger">No camera was selected.</p>';
+    return;
+  }
+
+  fetch(`${API_BASE_URL}/cameras/${encodeURIComponent(id)}`)
     .then(function (res) {
+      if (!res.ok) {
+        throw new Error('Unable to load camera');
+      }
       return res.json()
     })
     .then(function (camera) {
@@ -66,6 +74,10 @@ function getCameras() {
         window.localStorage.setItem('productsInCart', JSON.stringify(allCartItems));
       })
     })
+    .catch(function () {
+      camera.innerHTML =
+        '<p class="col text-center text-danger">This camera is unavailable right now. Please try again later.</p>';
+    });
 }
 
 getCameras()

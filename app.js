@@ -13,15 +13,18 @@ const { apiRateLimit } = require('./middleware/rateLimit');
 
 const app = express();
 
-// MongoDB connection with environment variables
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log('Successfully connected to MongoDB Atlas!');
-  })
-  .catch((error) => {
-    console.log('Unable to connect to MongoDB Atlas!');
-    console.error(error);
-  });
+// Keep app imports usable for tests and tooling that do not need a database.
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => {
+      console.log('Successfully connected to MongoDB Atlas!');
+    })
+    .catch((error) => {
+      console.error('Unable to connect to MongoDB Atlas!', error);
+    });
+} else {
+  console.warn('MONGODB_URI is not configured; database-backed routes will be unavailable.');
+}
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -33,6 +36,7 @@ app.use((req, res, next) => {
 
 // Static files
 app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use(express.static(__dirname));
 
 // Body parser
 app.use(bodyParser.json());

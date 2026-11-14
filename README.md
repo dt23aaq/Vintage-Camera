@@ -1,7 +1,8 @@
 
 # Orinoco - Vintage Camera E-Commerce
 
-Backend server for the Orinoco vintage camera e-commerce platform.
+Orinoco is a vintage camera storefront with a static browser frontend and an
+Express/MongoDB API for products and orders.
 
 ## Features
 
@@ -29,6 +30,14 @@ Backend server for the Orinoco vintage camera e-commerce platform.
 - Error handling middleware
 - Input validation middleware
 - Clean and maintainable code structure
+- Automated validation checks with `npm test`
+
+✅ **Frontend**
+- Camera catalogue and product details pages
+- Browser cart backed by local storage
+- Checkout form with client and server-side validation
+- Same-origin API configuration for local and deployed environments
+- User-facing loading and request error states
 
 ## Prerequisites
 
@@ -82,6 +91,20 @@ npm start
 
 The server will start on `http://localhost:3000` (or the port specified in `.env`)
 
+The Express server also serves the frontend, so open
+`http://localhost:3000/index.html` in a browser. If `MONGODB_URI` is not set,
+the pages still load, but product and order API requests cannot access data.
+
+### 5. Run the validation checks
+
+```bash
+npm test
+```
+
+The checks verify that the application, routes, controllers, authentication,
+rate limiting, and validation modules can be imported successfully without a
+database connection.
+
 ## Project Structure
 
 ```
@@ -106,6 +129,11 @@ The server will start on `http://localhost:3000` (or the port specified in `.env
 │   └── teddy.js
 ├── app.js              # Express application setup
 ├── server.js           # Server entry point
+├── index.html           # Camera catalogue
+├── singleproductdisplay.html # Product details
+├── cart.html            # Shopping cart
+├── contact-form.html    # Checkout form
+├── api-config.js        # Frontend API base URL
 ├── .env                # Environment variables (create this)
 ├── .gitignore          # Git ignore rules
 ├── package.json        # Dependencies and scripts
@@ -175,8 +203,7 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 npm test
 ```
 
-### Code Style
-The project follows standard JavaScript conventions with proper error handling and async/await patterns.
+This runs `test-validation.js`, which does not require MongoDB.
 
 ## Database Schema
 
@@ -250,7 +277,7 @@ Make sure to set these on your hosting platform:
 - [ ] User accounts and authentication
 - [ ] Product inventory management
 - [ ] Search and filtering
-- [ ] Unit and integration tests
+- [ ] Broader unit and integration test coverage
 - [ ] API versioning
 - [ ] Redis-based rate limiting
 - [ ] Logging system (Winston/Morgan)
@@ -258,5 +285,3 @@ Make sure to set these on your hosting platform:
 ## Support
 
 For issues or questions, please open an issue in the repository or contact the development team.
-
-My website is published here >> https://cadetcoder.github.io/P5-Javascript/
